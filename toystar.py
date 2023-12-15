@@ -156,7 +156,7 @@ def RealTimePlot( data, rho_data, density_data, rho_analytic ):
 	ax2 = plt.subplot(grid[2,0])
 	rlin = np.linspace(0,1,100)
 
-	for iiin range(data.shape[0]):
+	for i in range(data.shape[0]):
 		plt.sca(ax1)
 		plt.cla()
 		cval = np.minimum((rho_data[i]-3)/3,1).flatten()
@@ -230,7 +230,7 @@ def main():
 	density_data = np.zeros([Nt, 100])
 
 	# Simulation Main Loop
-	for iiin range(Nt):
+	for i in range(Nt):
 		# (1/2) kick
 		vel += acc * dt/2
 		# drift
