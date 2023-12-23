@@ -113,6 +113,7 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> integrate(double t, const Eigen::Arr
     std::vector<int>    pair_j;
     std::vector<double> q;
     std::vector<double> dq;
+    
 
     // Nearest Neighbors
     for (int ii = 0; ii < N - 1; ++ii) {

@@ -14,28 +14,32 @@ def plot_system(S_i):
     axs[0, 0].scatter(S_plot[:,0], S_plot[:,2])
     axs[0, 0].set_title('Density plot')
     axs[0, 0].set_xlabel('$Position ')
-    axs[0, 0].set_xlim([-0.4, 0.4])
+    axs[0, 0].set_xlim([0.2, 1.0])
+    axs[0, 0].set_ylim([0, 1])
     axs[0, 0].set_ylabel('$Density ')
 
     # Velocity plot
     axs[0, 1].scatter(S_plot[:,0], S_plot[:,1])
     axs[0, 1].set_title('Velocity plot')
     axs[0, 1].set_xlabel('$Position ')
-    axs[0, 1].set_xlim([-0.4, 0.4])
+    axs[0, 0].set_xlim([0.2, 1.0])
+    axs[0, 1].set_ylim([0, 1])
     axs[0, 1].set_ylabel('$Velocity ')
 
     # Energy plot
     axs[1, 0].scatter(S_plot[:,0], S_plot[:,3])
     axs[1, 0].set_title('Energy plot')
     axs[1, 0].set_xlabel('$Position ')
-    axs[1, 0].set_xlim([-0.4, 0.4])
+    axs[0, 0].set_xlim([0.2, 1.0])
+    axs[1, 0].set_ylim([1.8, 2.6])
     axs[1, 0].set_ylabel('$Internal energy ')
 
     # Pressure plot
     axs[1, 1].scatter(S_plot[:,0], S_plot[:,4])
-    axs[1, 1].set_xlim([-0.4, 0.4])
+    axs[0, 0].set_xlim([0.2, 1.0])
     axs[1, 1].set_title('Pressure plot')
     axs[1, 1].set_xlabel('$Position $')
+    axs[1, 1].set_ylim([0, 1.2])
     axs[1, 1].set_ylabel('$Pressure $')
 
     plt.savefig('c-plot.png', dpi=300)  # Guarda la gráfica como una imagen PNG con una resolución de 300 dpi
@@ -45,3 +49,5 @@ def plot_system(S_i):
 
 S_i = load_data("output.csv")
 plot_system(S_i)
+
+
