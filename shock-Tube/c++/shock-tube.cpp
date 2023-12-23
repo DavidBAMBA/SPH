@@ -87,9 +87,7 @@ Eigen::VectorXd Pressure (const Eigen::ArrayBase<Derived>& rho, const Eigen::Arr
     return (Gamma-1) * rho.array() * e.array();
 }
 
-double Acceleration(double mass,double rho_i, double rho_j, double P_i, double P_j,double dq, double Visc)
-                        
-{
+double Acceleration(double mass,double rho_i, double rho_j, double P_i, double P_j,double dq, double Visc){
     return  -mass * ( P_i/(rho_i*rho_i) + P_j/(rho_j*rho_j) + Visc) * dq;
 }
 
@@ -140,7 +138,7 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> integrate(double t, const Eigen::Arr
 
     // Update the self Density
     S.col(2) = mass.array() * (2.0 / (3.0 * h.array()));
-    //std::cout << "density: " << S.col(2).transpose() << "\n";
+    //std::cout << "density: " << S.col(2) << "\n";
 
     Eigen::MatrixXd dS = Eigen::MatrixXd::Zero(S.rows(), S.cols());
 
@@ -152,13 +150,14 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> integrate(double t, const Eigen::Arr
         S(pi, 2) += mass(pj) * q[kk];
         S(pj, 2) += mass(pi) * q[kk];
 
-        //std::cout << "Density update for pair " << pair_i[kk] << " and " << pair_j[kk] << ": " << S(pair_i[kk], 2) << " and " << S(pair_j[kk], 2) << "\n";
+        //std::cout << "Density update for pair " << pair_i[kk] << " and " << pair_j[kk] << ": " << S(pair_i[kk], 2) << " and " << S(pair_j[kk], 2) << "\t q: "<< q[kk] <<"\n";
 
     }
 
     //Update pressure
     S.col(4) = Pressure(S.col(2).array(), S.col(3).array());
     //std::cout << "pressure: " << S.col(4).transpose() << "\n";
+
     // Calculate the System Equations 
     for (int kk = 0; kk < NPairs; ++kk) {
         int pi = pair_i[kk];
@@ -194,9 +193,9 @@ template <typename Derived1, typename Derived2>
 Eigen::MatrixXd Integration(const Eigen::ArrayBase<Derived1>& In_S_flat, const Eigen::ArrayBase<Derived2>& mass) {// No need to multiply by NSteps
 
     double tstep = 0.00005;
-    const double tmax = tstep * 500;
+    const double tmax = tstep * 1000;
     const int    NSteps = static_cast<int>((tmax - tstep) / tstep);
-    std::cout<<"steps:"<< NSteps;
+    std::cout<<"steps: "<< NSteps;
     Eigen::ArrayXd S_flat  = In_S_flat;
     
 
@@ -205,7 +204,7 @@ Eigen::MatrixXd Integration(const Eigen::ArrayBase<Derived1>& In_S_flat, const E
     Eigen::MatrixXd S_item(N, NParams); 
     Eigen::ArrayXd S_temp(N*NParams), dS_flat(N*NParams);
 
-    double t = 0.00005;
+    double t = 0.5;
 
     // Loop for the integration
     for (int ii = 0; ii <= NSteps; ++ii) {// No need to multiply by NSteps
@@ -323,7 +322,6 @@ int main(){
     
     save_to_csv(S_int, "output.csv");
 
-    //std::cout<<"shape: "<<S_int.size()<<std::endl;
     
     return 0;
 }

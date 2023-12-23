@@ -17,23 +17,13 @@ plt.show()
 
 
 # Leer los datos del archivo CSV
-df = pd.read_csv("mesh.csv")
+df = mesh
 
 # Graficar la coordenada x en función de la presión
 plt.figure(figsize=(10, 5))
-plt.scatter(df['x'], df['P'], s=1, alpha=0.5)
+plt.scatter(df['x'], df['P'])
 plt.title('Posición x vs Presión')
 plt.xlabel('Posición x')
 plt.ylabel('Presión')
-plt.grid(True)
-plt.show()
-
-# Graficar la coordenada x en función de la energía
-plt.figure(figsize=(10, 5))
-plt.scatter(df['x'], df['e'], s=1, alpha=0.5)
-plt.title('Posición x vs Energía')
-plt.xlabel('Posición x')
-plt.ylabel('Energía')
-plt.grid(True)
 plt.show()
 

@@ -42,7 +42,7 @@ def plot_system(S_i):
     axs[1, 1].set_ylim([0, 1.2])
     axs[1, 1].set_ylabel('$Pressure $')
 
-    plt.savefig('c-plot.png', dpi=300)  # Guarda la gráfica como una imagen PNG con una resolución de 300 dpi
+    plt.savefig('c-plot.png', dpi=500)  # Guarda la gráfica como una imagen PNG con una resolución de 300 dpi
     plt.tight_layout()  # Adjusts the space between the plots for better layout
     plt.show()
 
