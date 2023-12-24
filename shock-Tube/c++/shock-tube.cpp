@@ -99,7 +99,7 @@ double Energy(double mass, double rho_i, double rho_j, double P_i,double  P_j, d
 template <typename Derived1, typename Derived2>
 std::pair<Eigen::VectorXd, Eigen::VectorXd> integrate(double t, const Eigen::ArrayBase<Derived1>& S_flat, const Eigen::ArrayBase<Derived2>& mass) {
 
-    Eigen::MatrixXd S  = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Map(static_cast<const Derived1&>(S_flat).data(), N, NParams);
+    Eigen::MatrixXd S = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>::Map(static_cast<const Derived1&>(S_flat).data(), N, NParams);
     
     //std::cout << "Initial S matrix: \n" << S << "\n";
 
@@ -190,24 +190,24 @@ std::pair<Eigen::VectorXd, Eigen::VectorXd> integrate(double t, const Eigen::Arr
 }
 
 template <typename Derived1, typename Derived2>
-Eigen::MatrixXd Integration(const Eigen::ArrayBase<Derived1>& In_S_flat, const Eigen::ArrayBase<Derived2>& mass) {// No need to multiply by NSteps
+Eigen::MatrixXd Integration(const Eigen::ArrayBase<Derived1>& In_S_flat, const Eigen::ArrayBase<Derived2>& mass) {
 
-    double tstep = 0.00005;
-    const double tmax = tstep * 1000;
+    double tstep = 0.0005;
+    const double tmax = tstep * 400;
     const int    NSteps = static_cast<int>((tmax - tstep) / tstep);
-    std::cout<<"steps: "<< NSteps;
-    Eigen::ArrayXd S_flat  = In_S_flat;
+    //std::cout<<"steps: "<< NSteps;
     
+    double t = 0.0005;
 
     // MatrixXd for results
-    Eigen::MatrixXd S_i(N, NParams); 
-    Eigen::MatrixXd S_item(N, NParams); 
-    Eigen::ArrayXd S_temp(N*NParams), dS_flat(N*NParams);
-
-    double t = 0.5;
+    Eigen::MatrixXd S_i(N, NParams);
+    Eigen::ArrayXd S_flat = In_S_flat;
+    Eigen::ArrayXd dS_flat(N*NParams);
 
     // Loop for the integration
     for (int ii = 0; ii <= NSteps; ++ii) {// No need to multiply by NSteps
+        
+        Eigen::ArrayXd S_temp  = S_flat;
 
         Eigen::ArrayXd k1(N * NParams);
         Eigen::ArrayXd k2(N * NParams);
@@ -215,45 +215,42 @@ Eigen::MatrixXd Integration(const Eigen::ArrayBase<Derived1>& In_S_flat, const E
         Eigen::ArrayXd k4(N * NParams);
 
         // k1
-        std::tie(dS_flat, S_temp) = integrate(t, S_flat, mass);
+        std::tie(dS_flat, S_temp) = integrate(t, S_temp, mass);
         k1 = tstep * dS_flat;
 
         // k2
-        S_flat = S_temp + 0.5 * k1;
-        std::tie(dS_flat, S_temp) = integrate(t, S_flat, mass);
+        S_temp += 0.5 * k1;
+        std::tie(dS_flat, S_temp) = integrate(t, S_temp, mass);
         k2 = tstep * dS_flat;
 
         // k3
-        S_flat = S_temp + 0.5 * k2;
-        std::tie(dS_flat, S_temp) = integrate(t, S_flat, mass);
+        S_temp += 0.5 * k2;
+        std::tie(dS_flat, S_temp) = integrate(t, S_temp, mass);
         k3 = tstep * dS_flat;
 
         // k4
-        S_flat = S_temp + k3;
-        std::tie(dS_flat, S_temp) = integrate(t, S_flat, mass);
+        S_temp += k3;
+        std::tie(dS_flat, S_temp) = integrate(t, S_temp, mass);
         k4 = tstep * dS_flat;
 
         // Update S_flat
-        S_flat = S_temp + (1.0/6.0) * (k1 + 2*k2 + 2*k3 + k4);
+        S_flat += (1.0/6.0) * (k1 + 2*k2 + 2*k3 + k4);
 
         t += tstep;
-        //S_i = Eigen::Map<Eigen::MatrixXd>(S_flat.data(), N, NParams);
-        std::cout <<"i: "<< ii <<std::endl; 
+
+        //std::cout <<"i: "<< ii <<std::endl; 
         
         }
 
     S_i = Eigen::Map<Eigen::MatrixXd>(S_flat.data(), N, NParams);
-    //std::cout << "\n\n\n S_int: \n\n\n"<< S_i.col(0) << std::endl; 
-
 
     return S_i;
 }
 
 
-
 void save_to_csv(const Eigen::MatrixXd& matrix, const std::string& filename) {
     std::ofstream out(filename);
-    
+    out << "x,vx,rho,e,P\n";
     for (int ii = 0; ii < matrix.rows(); ++ii) {
         for (int jj = 0; jj < matrix.cols(); ++jj) {
             out << matrix(ii, jj);

@@ -5,19 +5,19 @@
 #include <fstream>
 
 // Constant and Parameters
-const int Nx_l  = 50; const int Nx_r  = 10;
-const int Ny_l  = 25; const int Ny_r  = 5;
-const int Nz_l  = 25; const int Nz_r  = 5;
+const int Nx_l = 25; const int Nx_r = 5;
+const int Ny_l = 10; const int Ny_r = 5;
+const int Nz_l = 10; const int Nz_r = 5;
 
 const int Nx = Nx_l + Nx_r;
 const int Ny = Ny_l + Ny_r;
 const int Nz = Nz_l + Nz_r;
 const int N = Nx * Ny * Nz;
 
-const double kappa         = 2.0;
-const double nu            = 1.4;
-const double gamma1        = 1.4;
-const double Gamma         = 1.4;
+const double kappa  = 2.0;
+const double nu     = 1.4;
+const double gamma1 = 1.4;
+const double Gamma  = 1.4;
 
 struct Particle {
 
@@ -34,10 +34,6 @@ struct Particle {
     double d_e = 0;
     double d_rho = 0;
     double d_P = 0;
-
-    double h_len() const {
-        return nu * (mass / rho);
-    }
 
 };
 
@@ -84,6 +80,12 @@ std::vector<Particle> Mesh(double x1, double x2, double y1, double y2, double z1
         }
     }
     return mesh;
+}
+
+
+double h_len(double mass, double rho){
+    
+    return nu * (mass / rho);
 }
 
 
@@ -187,7 +189,7 @@ void nearest_neight(const std::vector<Particle>& mesh,
             // relative distance
             Eigen::Vector3d r_ij = mesh[ii].r - mesh[jj].r;
 
-            h_ij = 0.5 * ( mesh[ii].h_len() + mesh[ii].h_len() );
+            h_ij = 0.5 * ( h_len(mesh[ii].mass, mesh[ii].rho) + h_len(mesh[jj].mass, mesh[jj].rho) );
         
             // Condition of nearest
             if (r_ij.norm() <= kappa * h_ij){
@@ -220,7 +222,7 @@ std::vector<Particle> System(double t, std::vector<Particle>& mesh) {
     //std::cout << "Total pairs: " << pair_i.size() << "\n\n";
 
     for (Particle& p : mesh) {
-        p.rho = p.mass * (2.0 / (3.0 * p.h_len())); 
+        p.rho = p.mass * (2.0 / (3.0 * h_len(p.mass, p.rho))); 
     }
 
     // Update Density
@@ -246,7 +248,8 @@ std::vector<Particle> System(double t, std::vector<Particle>& mesh) {
         int pj = pair_j[kk];
 
         double a_visc = A_Viscosity(mesh[pi].r, mesh[pj].r, mesh[pi].v, mesh[pj].v,
-                                    mesh[pi].rho, mesh[pj].rho, mesh[pi].e, mesh[pj].e, mesh[pi].h_len(), mesh[pj].h_len());
+                                    mesh[pi].rho, mesh[pj].rho, mesh[pi].e, mesh[pj].e, h_len(mesh[pi].mass, mesh[pi].rho), h_len(mesh[pj].mass, mesh[pj].rho));
+    
         
         mesh[pi].d_v += Acceleration( mesh[pj].mass, mesh[pi].rho, mesh[pj].rho, mesh[pi].P, mesh[pj].P, dq[kk], a_visc);
         mesh[pj].d_v -= Acceleration( mesh[pi].mass, mesh[pj].rho, mesh[pi].rho, mesh[pj].P, mesh[pi].P, dq[kk], a_visc);
@@ -267,10 +270,10 @@ std::vector<Particle> System(double t, std::vector<Particle>& mesh) {
 }
 
 
-std::vector<Particle> Integration(std::vector<Particle> mesh) {
+std::vector<Particle> Integration(std::vector<Particle>& mesh) {
 
-    double tstep = 0.00005;
-    const double tmax = tstep * 500;
+    double tstep = 0.0005;
+    const double tmax = tstep * 400;
     const int    NSteps = static_cast<int>((tmax - tstep) / tstep);
     std::cout<<"steps:"<< NSteps;
     
@@ -278,15 +281,18 @@ std::vector<Particle> Integration(std::vector<Particle> mesh) {
     std::vector<Particle> int_mesh = mesh;
     double t = 0.00005;
 
-    std::vector<Particle> k1;
-    std::vector<Particle> k2;
-    std::vector<Particle> k3;
-    std::vector<Particle> k4;
 
     // Loop for the integration
     for (int ii = 0; ii <= NSteps; ++ii) {// No need to multiply by NSteps
+        
+        std::vector<Particle> int_mesh = mesh;
+        std::vector<Particle> k1;
+        std::vector<Particle> k2;
+        std::vector<Particle> k3;
+        std::vector<Particle> k4;
 
         int_mesh = System(t, int_mesh);
+        
         // k1
         for (Particle& p : int_mesh) {
             p.d_r *= tstep;
@@ -355,11 +361,11 @@ std::vector<Particle> Integration(std::vector<Particle> mesh) {
 
         // Update S_flat
         for (size_t ii = 0; ii < mesh.size(); ++ii) {
-            mesh[ii].r += (1.0/6.0) * (k1[ii].r + 2*k2[ii].r + 2*k3[ii].r + k4[ii].r);
-            mesh[ii].v += (1.0/6.0) * (k1[ii].v + 2*k2[ii].v + 2*k3[ii].v + k4[ii].v);
-            mesh[ii].e += (1.0/6.0) * (k1[ii].e + 2*k2[ii].e + 2*k3[ii].e + k4[ii].e);
-            mesh[ii].P += (1.0/6.0) * (k1[ii].P + 2*k2[ii].P + 2*k3[ii].P + k4[ii].P);
-            mesh[ii].rho += (1.0/6.0) * (k1[ii].rho + 2*k2[ii].rho + 2*k3[ii].rho + k4[ii].rho);
+            mesh[ii].r = (1.0/6.0) * (k1[ii].r + 2*k2[ii].r + 2*k3[ii].r + k4[ii].r);
+            mesh[ii].v = (1.0/6.0) * (k1[ii].v + 2*k2[ii].v + 2*k3[ii].v + k4[ii].v);
+            mesh[ii].e = (1.0/6.0) * (k1[ii].e + 2*k2[ii].e + 2*k3[ii].e + k4[ii].e);
+            mesh[ii].P = (1.0/6.0) * (k1[ii].P + 2*k2[ii].P + 2*k3[ii].P + k4[ii].P);
+            mesh[ii].rho = (1.0/6.0) * (k1[ii].rho + 2*k2[ii].rho + 2*k3[ii].rho + k4[ii].rho);
 
         };
 
@@ -369,7 +375,7 @@ std::vector<Particle> Integration(std::vector<Particle> mesh) {
         }
 
 
-    return int_mesh;
+    return mesh;
 }
 
 

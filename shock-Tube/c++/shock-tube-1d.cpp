@@ -30,7 +30,6 @@ struct Particle {
     double d_rho = 0.0;
     double d_P = 0.0;
 
-
 };
 
 
@@ -248,20 +247,17 @@ std::vector<Particle> System(double t, std::vector<Particle>& mesh1) {
 }
 
 
-std::vector<Particle> Integration(std::vector<Particle> mesh) {
+std::vector<Particle> Integration(std::vector<Particle>& mesh) {
 
-    double tstep = 0.00005;
-    const double tmax = tstep * 1000;
+    double tstep = 0.0005;
+    const double tmax = tstep * 400;
     const int    NSteps = static_cast<int>((tmax - tstep) / tstep);
-    std::cout<<"steps:"<< NSteps;
-    
-    // MatrixXd for results
-    std::vector<Particle> int_mesh = mesh;
-    double t = 0.00005;
+    double t = 0.0005;
 
     // Loop for the integration
     for (int ii = 0; ii <= NSteps; ++ii) {// No need to multiply by NSteps
         
+        std::vector<Particle> int_mesh = mesh;
         std::vector<Particle> k1;
         std::vector<Particle> k2;
         std::vector<Particle> k3;
@@ -336,11 +332,11 @@ std::vector<Particle> Integration(std::vector<Particle> mesh) {
 
         // Update Mesh
         for (size_t ii = 0; ii < mesh.size(); ++ii) {
-            mesh[ii].r += (1.0/6.0) * (k1[ii].r + 2*k2[ii].r + 2*k3[ii].r + k4[ii].r);
-            mesh[ii].v += (1.0/6.0) * (k1[ii].v + 2*k2[ii].v + 2*k3[ii].v + k4[ii].v);
-            mesh[ii].e += (1.0/6.0) * (k1[ii].e + 2*k2[ii].e + 2*k3[ii].e + k4[ii].e);
-            mesh[ii].P += (1.0/6.0) * (k1[ii].P + 2*k2[ii].P + 2*k3[ii].P + k4[ii].P);
-            mesh[ii].rho += (1.0/6.0) * (k1[ii].rho + 2*k2[ii].rho + 2*k3[ii].rho + k4[ii].rho);
+            mesh[ii].r = (1.0/6.0) * (k1[ii].r + 2*k2[ii].r + 2*k3[ii].r + k4[ii].r);
+            mesh[ii].v = (1.0/6.0) * (k1[ii].v + 2*k2[ii].v + 2*k3[ii].v + k4[ii].v);
+            mesh[ii].e = (1.0/6.0) * (k1[ii].e + 2*k2[ii].e + 2*k3[ii].e + k4[ii].e);
+            mesh[ii].P = (1.0/6.0) * (k1[ii].P + 2*k2[ii].P + 2*k3[ii].P + k4[ii].P);
+            mesh[ii].rho = (1.0/6.0) * (k1[ii].rho + 2*k2[ii].rho + 2*k3[ii].rho + k4[ii].rho);
 
         }
 
@@ -350,7 +346,7 @@ std::vector<Particle> Integration(std::vector<Particle> mesh) {
         
         }
 
-    return int_mesh;
+    return mesh;
 
 }
 
