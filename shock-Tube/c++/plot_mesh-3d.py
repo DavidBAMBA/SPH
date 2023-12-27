@@ -1,9 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-import numpy as np
 
-mesh = pd.read_csv('/home/yo/Documents/Tesis/codes/SPH/SPH/shock-Tube/c++/mesh-1.csv', delimiter=',')
+mesh = pd.read_csv('/home/yo/Documents/Tesis/codes/SPH/shock-Tube/c++/mesh-3d.csv', delimiter=',')
 print(mesh.head())
 
 fig = plt.figure()
@@ -21,7 +20,7 @@ df = mesh
 
 # Graficar la coordenada x en función de la presión
 plt.figure(figsize=(10, 5))
-plt.scatter(df['x'], df['P'])
+plt.scatter(df['x'], df['vx'])
 plt.title('Posición x vs Presión')
 plt.xlabel('Posición x')
 plt.ylabel('Presión')

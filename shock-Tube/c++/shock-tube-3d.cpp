@@ -26,7 +26,6 @@ struct Particle {
     Eigen::Vector3d v;
     double rho, e , P;
     double mass = 0.001875;
-    
 
     // Derivatives
     Eigen::Vector3d d_r  = Eigen::Vector3d::Zero();
@@ -380,10 +379,10 @@ std::vector<Particle> Integration(std::vector<Particle>& mesh) {
 
 
 void csv(const std::vector<Particle>& mesh){
-    std::ofstream file("mesh.csv");
+    std::ofstream file("mesh-3d.csv");
 
     // Escribe los encabezados en el archivo CSV
-    file << "x,y,z,vx,vy,vz,rho,e,P,v_x,v_y,v_z,a_x,a_y,a_z,d_rho,d_e,d_P\n";
+    file << "x,y,z,vx,vy,vz,rho,e,P\n";
     
     for (const auto& p : mesh) {
         file << p.r(0) << "," << p.r(1) << "," << p.r(2) << "," 

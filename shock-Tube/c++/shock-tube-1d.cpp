@@ -5,6 +5,8 @@
 #include <fstream>
 
 // Constant and Parameters
+
+double x1 = 0.0, x2 = 1.2;
 const int Nx_l  = 320; const int Nx_r  = 80;
 
 const int Nx = Nx_l + Nx_r;
@@ -69,6 +71,36 @@ std::vector<Particle> Mesh(double x1, double x2) {
     }
     return mesh;
 }
+
+
+void Boundary_Periodic(std::vector<Particle>& mesh, double x2){
+    for (auto& p : mesh){
+        double pos = std::fmod(p.r, x2);
+        
+        if (pos < 0) {
+            std::cout<<"pos_ori: "<<pos<<std::endl;
+            p.r = pos + x2;
+            std::cout<<"pos-corect: "<< p.r <<std::endl;
+        }
+        else {
+            p.r = pos;
+        }
+    }
+}
+
+void Boundary_Reflective(std::vector<Particle>& mesh, double x1, double x2) {
+    for (auto& p : mesh) {
+        // Reflect in x
+        if (p.r < x1) {
+            p.r = x1 + (x1 - p.r);
+            p.v *= -1; // Inviert velocity
+        } else if (p.r > x2) {
+            p.r = x2 - (p.r - x2);
+            p.v *= -1;
+        }
+    }
+}  
+
 
 double h_len(double mass, double rho) {
     double in = 0.0;
@@ -197,8 +229,6 @@ std::vector<Particle> System(double t, std::vector<Particle>& mesh1) {
 
     int NPairs = pair_i.size();
 
-    //std::cout << "Total pairs: " << pair_i.size() << "\n\n";
-
     // Update Self Density
     for (Particle& p : mesh) {
         p.rho = p.mass * (2.0 / (3.0 * h_len(p.mass, p.rho))); 
@@ -220,7 +250,6 @@ std::vector<Particle> System(double t, std::vector<Particle>& mesh1) {
         p.P = Pressure(p.rho, p.e);
     }
 
-    //std::cout << "pressure: " << S.col(4).transpose() << "\n";
     // Calculate the System Equations 
     for (int kk = 0; kk < NPairs; ++kk) {
         int pi = pair_i[kk];
@@ -235,8 +264,6 @@ std::vector<Particle> System(double t, std::vector<Particle>& mesh1) {
         mesh[pi].d_e += Energy(mesh[pj].mass, mesh[pi].rho, mesh[pj].rho, mesh[pi].P, mesh[pj].P, mesh[pi].v, mesh[pj].v, dq[kk], a_visc);
         mesh[pj].d_e -= Energy(mesh[pi].mass, mesh[pj].rho, mesh[pi].rho, mesh[pj].P, mesh[pi].P, mesh[pj].v, mesh[pi].v, dq[kk], a_visc);
 
-        //std::cout << "Acceleration for pair " << pair_i[kk] << " and " << pair_j[kk] << ": " << dS(pair_i[kk], 1) << " and " << dS(pair_j[kk], 1) << "\n";
-        //std::cout << "Energy for pair " << pair_i[kk] << " and " << pair_j[kk] << ": " << dS(pair_i[kk], 3) << " and " << dS(pair_j[kk], 3) << "\n";
     }
 
     for (Particle& p : mesh) {
@@ -255,25 +282,25 @@ std::vector<Particle> Integration(std::vector<Particle>& mesh) {
     double t = 0.0005;
 
     // Loop for the integration
-    for (int ii = 0; ii <= NSteps; ++ii) {// No need to multiply by NSteps
-        
+    for (int ii = 0; ii <= NSteps; ++ii) {
+
         std::vector<Particle> int_mesh = mesh;
         std::vector<Particle> k1;
         std::vector<Particle> k2;
         std::vector<Particle> k3;
         std::vector<Particle> k4;
         
-        int_mesh = System(t, int_mesh);
         // k1
+        int_mesh = System(t, int_mesh);
+        k1 = int_mesh;
+        
+        // k2
         for (Particle& p : int_mesh) {
             p.d_r *= tstep;
             p.d_v *= tstep;
             p.d_e *= tstep;
         }
 
-        k1 = int_mesh;
-
-        // k2
         for (Particle& p : int_mesh) {
             p.r   += 0.5 * p.d_r;
             p.v   += 0.5 * p.d_v;
@@ -281,74 +308,75 @@ std::vector<Particle> Integration(std::vector<Particle>& mesh) {
             p.rho += 0.5 * p.d_rho;
             p.P   += 0.5 * p.d_P;
         }
-
+        Boundary_Reflective(int_mesh, x1, x2);
+        
         int_mesh = System(t, int_mesh);
-
-        for (Particle& p : int_mesh) {
-            p.d_r *= tstep;
-            p.d_v *= tstep;
-            p.d_e *= tstep;
-        }
-
         k2 = int_mesh;
 
         // k3
         for (Particle& p : int_mesh) {
+            p.d_r *= tstep;
+            p.d_v *= tstep;
+            p.d_e *= tstep;
+        }
+
+        for (Particle& p : int_mesh) {
             p.r   += 0.5 * p.d_r;
             p.v   += 0.5 * p.d_v;
             p.e   += 0.5 * p.d_e;
             p.rho += 0.5 * p.d_rho;
             p.P   += 0.5 * p.d_P;
         }
+        Boundary_Reflective(int_mesh, x1, x2);
 
         int_mesh = System(t, int_mesh);
-
-        for (Particle& p : int_mesh) {
-            p.d_r *= tstep;
-            p.d_v *= tstep;
-            p.d_e *= tstep;
-        }
-
         k3 = int_mesh;
 
         // k4
         for (Particle& p : int_mesh) {
-            p.r   += 0.5 * p.d_r;
-            p.v   += 0.5 * p.d_v;
-            p.e   += 0.5 * p.d_e;
-            p.rho += 0.5 * p.d_rho;
-            p.P   += 0.5 * p.d_P;
-        }
-
-        int_mesh = System(t, int_mesh);
-
-        for (Particle& p : int_mesh) {
             p.d_r *= tstep;
             p.d_v *= tstep;
             p.d_e *= tstep;
         }
 
+        for (Particle& p : int_mesh) {
+            p.r   +=  p.d_r;
+            p.v   +=  p.d_v;
+            p.e   +=  p.d_e;
+            p.rho +=  p.d_rho;
+            p.P   +=  p.d_P;
+        }
+        Boundary_Reflective(int_mesh, x1, x2);
+
+        int_mesh = System(t, int_mesh);
         k4 = int_mesh;
 
+
         // Update Mesh
+
+
         for (size_t ii = 0; ii < mesh.size(); ++ii) {
+            
             mesh[ii].r = (1.0/6.0) * (k1[ii].r + 2*k2[ii].r + 2*k3[ii].r + k4[ii].r);
             mesh[ii].v = (1.0/6.0) * (k1[ii].v + 2*k2[ii].v + 2*k3[ii].v + k4[ii].v);
             mesh[ii].e = (1.0/6.0) * (k1[ii].e + 2*k2[ii].e + 2*k3[ii].e + k4[ii].e);
             mesh[ii].P = (1.0/6.0) * (k1[ii].P + 2*k2[ii].P + 2*k3[ii].P + k4[ii].P);
             mesh[ii].rho = (1.0/6.0) * (k1[ii].rho + 2*k2[ii].rho + 2*k3[ii].rho + k4[ii].rho);
-
+            
         }
+        Boundary_Reflective(int_mesh, x1, x2);
 
         t += tstep;
 
-        std::cout <<"i: "<< ii <<std::endl; 
+        std::cout <<"               i: "<< ii <<std::endl; 
         
         }
 
     return mesh;
 
 }
+
+
 
 std::vector<Particle> EulerIntegration(std::vector<Particle>& mesh) {
     double tstep = 0.0000005;
@@ -389,7 +417,6 @@ int main(){
 
     // Define the dimentions of tube
     double t1 = 1.0;
-    double x1 = 0.0, x2 = 1.2;
 
     std::vector<Particle> mesh = Mesh(x1,x2);
     std::cout<<" Mesh created" << std::endl;
