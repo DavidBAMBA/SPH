@@ -221,9 +221,9 @@ def integrate(t, W):
 #_________________________________________ INTEGRATION ____________________________________________#
 
 # Integration parameters
-tstep = 0.0005
+tstep = 0.005
 tmin = 0
-tmax = tstep*400
+tmax = tstep*40
 steps = np.arange(tstep, tmax, tstep)
 NSteps = len(steps)
 
