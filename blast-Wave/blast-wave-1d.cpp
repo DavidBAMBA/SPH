@@ -170,8 +170,7 @@ double Energy(double mass, double rho_i, double rho_j, double P_i,double  P_j, d
 }
 
 
-void nearest_neight(const std::vector<Particle>& mesh,
-                    std::vector<int>& pair_i, std::vector<int>& pair_j,
+void nearest_neight(const std::vector<Particle>& mesh,std::vector<int>& pair_i, std::vector<int>& pair_j,
                     std::vector<double>& q, std::vector<double>& dq) {
 
     double h_ij;
@@ -200,7 +199,7 @@ void nearest_neight(const std::vector<Particle>& mesh,
 }
 
 
-std::vector<Particle> System(double t, std::vector<Particle>& mesh1) {
+std::vector<Particle> System(std::vector<Particle>& mesh1) {
 
     std::vector<Particle> mesh = mesh1;
     std::vector<int> pair_i;
@@ -258,7 +257,7 @@ std::vector<Particle> System(double t, std::vector<Particle>& mesh1) {
 }
 
 
-std::vector<Particle> Integration(std::vector<Particle>& mesh) {
+std::vector<Particle> Integration(std::vector<Particle>& mesh, double x1, double x2) {
 
     double tstep = 0.0005;
     const double tmax = tstep * 200;
@@ -274,94 +273,53 @@ std::vector<Particle> Integration(std::vector<Particle>& mesh) {
         std::vector<Particle> k3;
         std::vector<Particle> k4;
         
-        int_mesh = System(t, int_mesh);
-
-        // k1
-        for (Particle& p : int_mesh) {
-            p.d_r *= tstep;
-            p.d_v *= tstep;
-            p.d_e *= tstep;
-        }
-
-        //Boundary_C(int_mesh, x1, x2);
-        k1 = int_mesh;
-        
+        k1 = System(int_mesh);
 
         // k2
-        for (Particle& p : int_mesh) {
-            p.r   += 0.5 * p.d_r;
-            p.v   += 0.5 * p.d_v;
-            p.e   += 0.5 * p.d_e;
-            p.rho += 0.5 * p.d_rho;
-            p.P   += 0.5 * p.d_P;
+        for (size_t ii = 0; ii < int_mesh.size(); ++ii) {
+            int_mesh[ii].r = k1[ii].r + 0.5 * tstep * k1[ii].d_r;
+            int_mesh[ii].v = k1[ii].v + 0.5 * tstep * k1[ii].d_v;
+            int_mesh[ii].e = k1[ii].e + 0.5 * tstep * k1[ii].d_e;
         }
-
-        
-        int_mesh = System(t, int_mesh);
-
-        for (Particle& p : int_mesh) {
-            p.d_r *= tstep;
-            p.d_v *= tstep;
-            p.d_e *= tstep;
-        }
-
-        //Boundary_C(int_mesh, x1, x2);
-        k2 = int_mesh;
+        //Boundary_Periodic(int_mesh, x2);
+        //Boundary_Reflective(int_mesh, x1, x2);
+        k2 = System(int_mesh);
 
         // k3
-        for (Particle& p : int_mesh) {
-            p.r   += 0.5 * p.d_r;
-            p.v   += 0.5 * p.d_v;
-            p.e   += 0.5 * p.d_e;
-            p.rho += 0.5 * p.d_rho;
-            p.P   += 0.5 * p.d_P;
+        for (size_t ii = 0; ii < int_mesh.size(); ++ii) {
+            int_mesh[ii].r = k2[ii].r + 0.5 * tstep * k2[ii].d_r;
+            int_mesh[ii].v = k2[ii].v + 0.5 * tstep * k2[ii].d_v;
+            int_mesh[ii].e = k2[ii].e + 0.5 * tstep * k2[ii].d_e;
         }
-
-        int_mesh = System(t, int_mesh);
-
-        for (Particle& p : int_mesh) {
-            p.d_r *= tstep;
-            p.d_v *= tstep;
-            p.d_e *= tstep;
-        }
-
-        //Boundary_C(int_mesh, x1, x2);
-        k3 = int_mesh;
+        //Boundary_Periodic(int_mesh, x2);
+        //Boundary_Reflective(int_mesh, x1, x2);
+        k3 = System(int_mesh);
 
         // k4
-        for (Particle& p : int_mesh) {
-            p.r   += 0.5 * p.d_r;
-            p.v   += 0.5 * p.d_v;
-            p.e   += 0.5 * p.d_e;
-            p.rho += 0.5 * p.d_rho;
-            p.P   += 0.5 * p.d_P;
+        for (size_t ii = 0; ii < int_mesh.size(); ++ii) {
+            int_mesh[ii].r = k3[ii].r + tstep * k3[ii].d_r;
+            int_mesh[ii].v = k3[ii].v + tstep * k3[ii].d_v;
+            int_mesh[ii].e = k3[ii].e + tstep * k3[ii].d_e;
         }
-
-        int_mesh = System(t, int_mesh);
-
-        for (Particle& p : int_mesh) {
-            p.d_r *= tstep;
-            p.d_v *= tstep;
-            p.d_e *= tstep;
-        }
-
-        //Boundary_C(int_mesh, x1, x2);
-        k4 = int_mesh;
+        //Boundary_Periodic(int_mesh, x2);
+        //Boundary_Reflective(int_mesh, x1, x2);
+        k4 = System(int_mesh);
 
         // Update Mesh
         for (size_t ii = 0; ii < mesh.size(); ++ii) {
-            
-            mesh[ii].r = (1.0/6.0) * (k1[ii].r + 2*k2[ii].r + 2*k3[ii].r + k4[ii].r);
-            mesh[ii].v = (1.0/6.0) * (k1[ii].v + 2*k2[ii].v + 2*k3[ii].v + k4[ii].v);
-            mesh[ii].e = (1.0/6.0) * (k1[ii].e + 2*k2[ii].e + 2*k3[ii].e + k4[ii].e);
-            mesh[ii].P = (1.0/6.0) * (k1[ii].P + 2*k2[ii].P + 2*k3[ii].P + k4[ii].P);
-            mesh[ii].rho = (1.0/6.0) * (k1[ii].rho + 2*k2[ii].rho + 2*k3[ii].rho + k4[ii].rho);
-            //Boundary_C(mesh, x1, x2);
+            mesh[ii].r   += (tstep / 6.0) * (k1[ii].d_r + 2 * k2[ii].d_r + 2 * k3[ii].d_r + k4[ii].d_r);
+            mesh[ii].v   += (tstep / 6.0) * (k1[ii].d_v + 2 * k2[ii].d_v + 2 * k3[ii].d_v + k4[ii].d_v);
+            mesh[ii].e   += (tstep / 6.0) * (k1[ii].d_e + 2 * k2[ii].d_e + 2 * k3[ii].d_e + k4[ii].d_e);
+            mesh[ii].P   = k4[ii].P; 
+            mesh[ii].rho = k4[ii].rho;
         }
+        //Boundary_Periodic(mesh, x2);
+        //Boundary_Reflective(mesh, x1, x2);
+        //Boundary_Periodic(mesh, x2);
 
         t += tstep;
 
-        std::cout <<"i: "<< ii <<std::endl; 
+        std::cout <<"  bi: "<< ii <<std::endl; 
         
         }
 
@@ -370,26 +328,28 @@ std::vector<Particle> Integration(std::vector<Particle>& mesh) {
 }
 
 
-
 std::vector<Particle> EulerIntegration(std::vector<Particle>& mesh) {
-    double tstep = 0.0000005;
-    int NSteps = 310;
-    std::vector<Particle>& int_mesh = mesh;
+    double tstep = 0.000005;
+    int NSteps = 30000;
+    
+    std::vector<Particle> int_mesh = mesh;
 
     for (int step = 0; step < NSteps; ++step) {
-        // Calcular las derivadas de cada partícula en la malla
-        int_mesh = System(tstep, int_mesh);
 
-        // Actualizar las propiedades de cada partícula con las derivadas
-        for (Particle& p : int_mesh) {
-            p.r += p.d_r * tstep;
-            p.v += p.d_v * tstep;
-            p.e += p.d_e * tstep;
+        int_mesh = System(mesh);
+
+        for (size_t ii = 0; ii < int_mesh.size(); ++ii) {
+            mesh[ii].r   = int_mesh[ii].r + tstep * int_mesh[ii].d_r;
+            mesh[ii].v   = int_mesh[ii].v + tstep * int_mesh[ii].d_v;
+            mesh[ii].e   = int_mesh[ii].e + tstep * int_mesh[ii].d_e;
+            mesh[ii].P   = int_mesh[ii].P + tstep * int_mesh[ii].d_P;
+            mesh[ii].rho = int_mesh[ii].rho + tstep * int_mesh[ii].d_rho;
         }
-
+        std::cout<<"i: "<< step <<std::endl;
     }
+    
 
-    return int_mesh;
+    return mesh;
 }
 
 
@@ -409,11 +369,10 @@ void csv(const std::vector<Particle>& mesh){
 int main(){
 
     // Define the dimentions of tube
-    double t1 = 1.0;
 
     std::vector<Particle> mesh = Mesh(x1,x2);
     std::cout<<" Mesh created" << std::endl;
-    std::vector<Particle> int_mesh = Integration(mesh);
+    std::vector<Particle> int_mesh = Integration(mesh, x1, x2);
 
     csv(int_mesh);
 

@@ -41,7 +41,7 @@ def plot_system(S_i):
     plt.show()
 
 
-mesh = pd.read_csv('/home/yo/Documents/Tesis/codes/SPH/blast-Wave/mesh-1d.csv', delimiter=',')
+mesh = pd.read_csv('/home/yo/Documents/Tesis/codes/SPH/blast-Wave/mesh-2d.csv', delimiter=',')
 plot_system(mesh)
 
 

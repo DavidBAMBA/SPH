@@ -203,10 +203,7 @@ void nearest_neight(const std::vector<Particle>& mesh,
 }
 
 
-std::vector<Particle> System(double t, std::vector<Particle>& mesh) {
-
-    //std::cout << "Initial S matrix: \n" << S << "\n";
-    //std::cout << "Calculated h: \n" << h.transpose() << "\n";
+std::vector<Particle> System(std::vector<Particle>& mesh) {
 
     std::vector<int> pair_i;
     std::vector<int> pair_j;
@@ -217,8 +214,6 @@ std::vector<Particle> System(double t, std::vector<Particle>& mesh) {
     nearest_neight(mesh, pair_i, pair_j, q, dq);
 
     int NPairs = pair_i.size();
-
-    //std::cout << "Total pairs: " << pair_i.size() << "\n\n";
 
     for (Particle& p : mesh) {
         p.rho = p.mass * (2.0 / (3.0 * h_len(p.mass, p.rho))); 
@@ -232,7 +227,6 @@ std::vector<Particle> System(double t, std::vector<Particle>& mesh) {
         
         mesh[pi].rho += mesh[pj].mass * q[kk];
         mesh[pj].rho += mesh[pi].mass * q[kk];
-        //std::cout << "Density update for pair " << pair_i[kk] << " and " << pair_j[kk] << ": " << S(pair_i[kk], 2) << " and " << S(pair_j[kk], 2) << "\n";
     }
     
     // Update Pressure
@@ -240,7 +234,6 @@ std::vector<Particle> System(double t, std::vector<Particle>& mesh) {
         p.P = Pressure(p.rho, p.e);
     }
 
-    //std::cout << "pressure: " << S.col(4).transpose() << "\n";
     // Calculate the System Equations 
     for (int kk = 0; kk < NPairs; ++kk) {
         int pi = pair_i[kk];
@@ -256,125 +249,84 @@ std::vector<Particle> System(double t, std::vector<Particle>& mesh) {
         mesh[pi].d_e += Energy(mesh[pj].mass, mesh[pi].rho, mesh[pj].rho, mesh[pi].P, mesh[pj].P, mesh[pi].v, mesh[pj].v, dq[kk], a_visc);
         mesh[pj].d_e -= Energy(mesh[pi].mass, mesh[pj].rho, mesh[pi].rho, mesh[pj].P, mesh[pi].P, mesh[pj].v, mesh[pi].v, dq[kk], a_visc);
 
-        //std::cout << "Acceleration for pair " << pair_i[kk] << " and " << pair_j[kk] << ": " << dS(pair_i[kk], 1) << " and " << dS(pair_j[kk], 1) << "\n";
-        //std::cout << "Energy for pair " << pair_i[kk] << " and " << pair_j[kk] << ": " << dS(pair_i[kk], 3) << " and " << dS(pair_j[kk], 3) << "\n";
     }
 
     for (Particle& p : mesh) {
         p.d_r = p.v; 
     }
 
-    //std::cout << "Final S matrix: \n" << S << "\n";
     return mesh;
 }
 
 
-std::vector<Particle> Integration(std::vector<Particle>& mesh) {
+std::vector<Particle> Integration(std::vector<Particle>& mesh, double x1, double x2) {
 
     double tstep = 0.0005;
-    const double tmax = tstep * 400;
+    const double tmax = tstep * 200;
     const int    NSteps = static_cast<int>((tmax - tstep) / tstep);
-    std::cout<<"steps:"<< NSteps;
-    
-    // MatrixXd for results
-    std::vector<Particle> int_mesh = mesh;
-    double t = 0.00005;
-
+    double t = 0.0005;
 
     // Loop for the integration
-    for (int ii = 0; ii <= NSteps; ++ii) {// No need to multiply by NSteps
-        
+    for (int ii = 0; ii <= NSteps; ++ii) {
+
         std::vector<Particle> int_mesh = mesh;
         std::vector<Particle> k1;
         std::vector<Particle> k2;
         std::vector<Particle> k3;
         std::vector<Particle> k4;
-
-        int_mesh = System(t, int_mesh);
         
-        // k1
-        for (Particle& p : int_mesh) {
-            p.d_r *= tstep;
-            p.d_v *= tstep;
-            p.d_e *=tstep;
-        }
-
-        k1 = int_mesh;
+        k1 = System(int_mesh);
 
         // k2
-        for (Particle& p : int_mesh) {
-            p.r   += 0.5 * p.d_r;
-            p.v   += 0.5 * p.d_v;
-            p.e   += 0.5 * p.d_e;
-            p.rho += 0.5 * p.d_rho;
-            p.P   += 0.5 * p.d_P;
+        for (size_t ii = 0; ii < int_mesh.size(); ++ii) {
+            int_mesh[ii].r = k1[ii].r + 0.5 * tstep * k1[ii].d_r;
+            int_mesh[ii].v = k1[ii].v + 0.5 * tstep * k1[ii].d_v;
+            int_mesh[ii].e = k1[ii].e + 0.5 * tstep * k1[ii].d_e;
         }
-
-        int_mesh = System(t, int_mesh);
-
-        for (Particle& p : int_mesh) {
-            p.d_r *= tstep;
-            p.d_v *= tstep;
-            p.d_e *= tstep;
-        }
-
-        k2 = int_mesh;
+        //Boundary_Periodic(int_mesh, x2);
+        //Boundary_Reflective(int_mesh, x1, x2);
+        k2 = System(int_mesh);
 
         // k3
-        for (Particle& p : int_mesh) {
-            p.r   += 0.5 * p.d_r;
-            p.v   += 0.5 * p.d_v;
-            p.e   += 0.5 * p.d_e;
-            p.rho += 0.5 * p.d_rho;
-            p.P   += 0.5 * p.d_P;
+        for (size_t ii = 0; ii < int_mesh.size(); ++ii) {
+            int_mesh[ii].r = k2[ii].r + 0.5 * tstep * k2[ii].d_r;
+            int_mesh[ii].v = k2[ii].v + 0.5 * tstep * k2[ii].d_v;
+            int_mesh[ii].e = k2[ii].e + 0.5 * tstep * k2[ii].d_e;
         }
-
-        int_mesh = System(t, int_mesh);
-
-        for (Particle& p : int_mesh) {
-            p.d_r *= tstep;
-            p.d_v *= tstep;
-            p.d_e *=tstep;
-        }
-
-        k3 = int_mesh;
+        //Boundary_Periodic(int_mesh, x2);
+        //Boundary_Reflective(int_mesh, x1, x2);
+        k3 = System(int_mesh);
 
         // k4
-        for (Particle& p : int_mesh) {
-            p.r   += 0.5 * p.d_r;
-            p.v   += 0.5 * p.d_v;
-            p.e   += 0.5 * p.d_e;
-            p.rho += 0.5 * p.d_rho;
-            p.P   += 0.5 * p.d_P;
+        for (size_t ii = 0; ii < int_mesh.size(); ++ii) {
+            int_mesh[ii].r = k3[ii].r + tstep * k3[ii].d_r;
+            int_mesh[ii].v = k3[ii].v + tstep * k3[ii].d_v;
+            int_mesh[ii].e = k3[ii].e + tstep * k3[ii].d_e;
         }
+        //Boundary_Periodic(int_mesh, x2);
+        //Boundary_Reflective(int_mesh, x1, x2);
+        k4 = System(int_mesh);
 
-        int_mesh = System(t, int_mesh);
-
-        for (Particle& p : int_mesh) {
-            p.d_r *= tstep;
-            p.d_v *= tstep;
-            p.d_e *= tstep;
-        }
-
-        k4 = int_mesh;
-
-        // Update S_flat
+        // Update Mesh
         for (size_t ii = 0; ii < mesh.size(); ++ii) {
-            mesh[ii].r = (1.0/6.0) * (k1[ii].r + 2*k2[ii].r + 2*k3[ii].r + k4[ii].r);
-            mesh[ii].v = (1.0/6.0) * (k1[ii].v + 2*k2[ii].v + 2*k3[ii].v + k4[ii].v);
-            mesh[ii].e = (1.0/6.0) * (k1[ii].e + 2*k2[ii].e + 2*k3[ii].e + k4[ii].e);
-            mesh[ii].P = (1.0/6.0) * (k1[ii].P + 2*k2[ii].P + 2*k3[ii].P + k4[ii].P);
-            mesh[ii].rho = (1.0/6.0) * (k1[ii].rho + 2*k2[ii].rho + 2*k3[ii].rho + k4[ii].rho);
-
-        };
+            mesh[ii].r   += (tstep / 6.0) * (k1[ii].d_r + 2 * k2[ii].d_r + 2 * k3[ii].d_r + k4[ii].d_r);
+            mesh[ii].v   += (tstep / 6.0) * (k1[ii].d_v + 2 * k2[ii].d_v + 2 * k3[ii].d_v + k4[ii].d_v);
+            mesh[ii].e   += (tstep / 6.0) * (k1[ii].d_e + 2 * k2[ii].d_e + 2 * k3[ii].d_e + k4[ii].d_e);
+            mesh[ii].P   = k4[ii].P; 
+            mesh[ii].rho = k4[ii].rho;
+        }
+        //Boundary_Periodic(mesh, x2);
+        //Boundary_Reflective(mesh, x1, x2);
+        //Boundary_Periodic(mesh, x2);
 
         t += tstep;
-        std::cout <<"i: "<< ii <<std::endl; 
+
+        std::cout <<"  bi: "<< ii <<std::endl; 
         
         }
 
-
     return mesh;
+
 }
 
 
@@ -394,18 +346,16 @@ void csv(const std::vector<Particle>& mesh){
 }
 
 
-
 int main(){
 
     // Define the dimentions of tube
-    double t1 = 1.0;
     double x1 = -0.6, x2 = 0.6;
     double y1 = -0.2, y2 = 0.2;
     double z1 = -0.2, z2 = 0.2;
 
     std::vector<Particle> mesh = Mesh(x1,x2,y1,y2,z1,z2);
     std::cout<<" Mesh created" << std::endl;
-    std::vector<Particle> int_mesh = Integration(mesh);
+    std::vector<Particle> int_mesh = Integration(mesh, x1, x2);
 
     csv(int_mesh);
 

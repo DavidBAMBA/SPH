@@ -11,28 +11,28 @@ def plot_system(S_i):
     # Density plot
     axs[0, 0].scatter(S_plot['x'], S_plot['rho'], s=1)
     axs[0, 0].set_xlabel('x')
-    #axs[0, 0].set_xlim([0.2, 1.0])
+    axs[0, 0].set_xlim([-0.4, 0.4])
     axs[0, 0].set_ylim([0, 1.1])
     axs[0, 0].set_ylabel('Density')
 
     # Velocity plot
     axs[0, 1].scatter(S_plot['x'], S_plot['vx'], s=1)
     axs[0, 1].set_xlabel('x')
-    #axs[0, 1].set_xlim([0.2, 1.0])
+    axs[0, 1].set_xlim([-0.4, 0.4])
     axs[0, 1].set_ylim([0, 1])
     axs[0, 1].set_ylabel('Velocity ')
 
     # Energy plot
     axs[1, 0].scatter(S_plot['x'], S_plot['e'], s=1)
     axs[1, 0].set_xlabel('x ')
-    #axs[1, 0].set_xlim([0.2, 1.0])
+    axs[1, 0].set_xlim([-0.4, 0.4])
     axs[1, 0].set_ylim([1.8, 2.6])
     axs[1, 0].set_ylabel('Energy')
 
     # Pressure plot
     axs[1, 1].scatter(S_plot['x'], S_plot['P'], s=1)
     axs[1, 1].set_xlabel('x')
-    #axs[1, 1].set_xlim([0.2, 1.1])
+    axs[1, 1].set_xlim([-0.4, 0.4])
     axs[1, 1].set_ylim([0, 1.2])
     axs[1, 1].set_ylabel('Pressure')
     
