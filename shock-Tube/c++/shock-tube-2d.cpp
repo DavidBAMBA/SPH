@@ -8,8 +8,8 @@
 
 
 
-const int Nx_l  = 50; const int Nx_r  = 50;
-const int Ny_l  = 10; const int Ny_r  = 10;
+const int Nx_l = 10; const int Nx_r = 5;
+const int Ny_l = 10; const int Ny_r = 5;
 const int Nx = Nx_l + Nx_r;
 const int Ny = Ny_l + Ny_r;
 
@@ -37,34 +37,44 @@ struct Particle {
 };
 
 std::vector<Particle> Mesh(double x1, double x2, double y1, double y2) {
-    // Calculate steps
-
+    // Calculate dimensions
     double xdim = x2 - x1;
     double ydim = y2 - y1;
-    double xstep_l = (xdim/2.0) / Nx_l; double xstep_r = (xdim/2.0) / Nx_r;
-    double ystep = ydim / (Ny-1); 
+
+    // Calculate steps for left and right sides
+    double xstep_l = (xdim / 2.0) / Nx_l;
+    double xstep_r = (xdim / 2.0) / Nx_r;
+    double ystep = ydim / ((Ny - 1) * sqrt(3) / 2);
 
     // Create a mesh of particles
     std::vector<Particle> mesh;
-    mesh.reserve(N);
+    mesh.reserve(Nx_l * Ny + Nx_r * Ny);
 
-    for(int jj = 1; jj <= Ny ; ++jj){
-        for(int ii = 1; ii <= Nx ; ++ii){
-    
+    // Offsets for hexagonal close packing
+    double xOffset_l = xstep_l / 2;
+    double xOffset_r = xstep_r / 2;
+    double yOffset = ystep * sqrt(3) / 2;
+
+    for (int jj = 1; jj <= Ny; ++jj) {
+        for (int ii = 1; ii <= (Nx_l + Nx_r); ++ii) {
             Particle p;
 
-            // Left side
-            if (ii < Nx_l ){
-                p.r = Eigen::Vector2d(x1 + ii*xstep_l, y1 + jj*ystep);
-                p.v = Eigen::Vector2d(0.0,0.0);
-                p.rho = 1;
+            // Calculate position with offsets for hexagonal packing
+            double x, y;
+            y = y1 + (jj - 1) * yOffset;
+
+            if (ii <= Nx_l) { // Left side
+                x = x1 + (ii - 1) * xstep_l + (jj % 2) * xOffset_l;
+                p.r = Eigen::Vector2d(x, y);
+                p.v = Eigen::Vector2d(0.0, 0.0);
+                p.rho = 1.0;
                 p.e = 2.5;
-                p.P = 1;
-            }
-            // Right side
-            else {
-                p.r = Eigen::Vector2d( x2 - (Nx - ii) * xstep_r, y1 + jj*ystep);
-                p.v = Eigen::Vector2d(0.0,0.0);
+                p.P = 1.0;
+            } else { // Right side
+                int ii_r = ii - Nx_l; // Adjusted index for right side
+                x = x1 + xdim / 2 + (ii_r - 1) * xstep_r + (jj % 2) * xOffset_r;
+                p.r = Eigen::Vector2d(x, y);
+                p.v = Eigen::Vector2d(0.0, 0.0);
                 p.rho = 0.2;
                 p.e = 1.795;
                 p.P = 0.1795;
@@ -131,8 +141,57 @@ void Boundary_Periodic(std::vector<Particle>& mesh, double x2, double y2){
 
 
 double h_len(double mass, double rho) {
-    return nu * mass / rho;
+    return 1.0; //nu * mass / rho;
 }
+
+#include <Eigen/Dense>
+#include <cmath>
+
+double M6QuinticKernel2D(const Eigen::Vector2d& r_ij, double h) {
+    const double sigma = 7.0 / (478.0 * M_PI * h * h);
+    double r = r_ij.norm();
+    double q = r / h;
+    double w = 0.0;
+
+    if (q >= 0.0 && q < 1.0) {
+        w = sigma * ((3 - q) * (3 - q) * (3 - q) * (3 - q) * (3 - q) - 
+                     6 * (2 - q) * (2 - q) * (2 - q) * (2 - q) * (2 - q) +
+                     15 * (1 - q) * (1 - q) * (1 - q) * (1 - q) * (1 - q));
+    } else if (q >= 1.0 && q < 2.0) {
+        w = sigma * ((3 - q) * (3 - q) * (3 - q) * (3 - q) * (3 - q) - 
+                     6 * (2 - q) * (2 - q) * (2 - q) * (2 - q) * (2 - q));
+    } else if (q >= 2.0 && q < 3.0) {
+        w = sigma * ((3 - q) * (3 - q) * (3 - q) * (3 - q) * (3 - q));
+    }
+    
+    return w;
+}
+
+
+Eigen::Vector2d GradM6QuinticKernel2D(const Eigen::Vector2d& r_ij, double h) {
+    const double sigma = 7.0 / (478.0 * M_PI * h * h);
+    double r = r_ij.norm();
+    double q = r / h;
+    Eigen::Vector2d gradW = Eigen::Vector2d::Zero();
+
+    if (r > 0.0) { // Para evitar la división por cero
+        Eigen::Vector2d unit_r_ij = r_ij.normalized(); // Vector unitario en la dirección de r_ij
+
+        if (q >= 0.0 && q < 1.0) {
+            double factor = sigma * (-5.0 * std::pow(3 - q, 4) + 30.0 * std::pow(2 - q, 4) - 75.0 * std::pow(1 - q, 4)) / h;
+            gradW = factor * unit_r_ij;
+        } else if (q >= 1.0 && q < 2.0) {
+            double factor = sigma * (-5.0 * std::pow(3 - q, 4) + 30.0 * std::pow(2 - q, 4)) / h;
+            gradW = factor * unit_r_ij;
+        } else if (q >= 2.0 && q < 3.0) {
+            double factor = sigma * (-5.0 * std::pow(3 - q, 4)) / h;
+            gradW = factor * unit_r_ij;
+        }
+    }
+
+    return gradW;
+}
+
 
 
 double Kernel(const Eigen::Vector2d& r_ij, double h)
@@ -311,7 +370,7 @@ std::vector<Particle> System(std::vector<Particle>& mesh1) {
 std::vector<Particle> Integration(std::vector<Particle>& mesh, double x1, double x2) {
 
     double tstep = 0.0005;
-    const double tmax = tstep * 400;
+    const double tmax = tstep * 4;
     const int    NSteps = static_cast<int>((tmax - tstep) / tstep);
     double t = 0.0005;
 
@@ -380,8 +439,8 @@ std::vector<Particle> Integration(std::vector<Particle>& mesh, double x1, double
 
 
 std::vector<Particle> EulerIntegration(std::vector<Particle>& mesh) {
-    double tstep = 0.000005;
-    int NSteps = 30000;
+    double tstep = 0.0005;
+    int NSteps = 10;
     
     std::vector<Particle> int_mesh = mesh;
 
@@ -427,7 +486,7 @@ int main(){
     double y1 = 0.0; double y2 = 0.3;
     std::vector<Particle> mesh = Mesh(x1,x2,y1,y2);
     std::cout<<" Mesh created" << std::endl;
-    std::vector<Particle> int_mesh = Integration(mesh, x1, x2);
+    std::vector<Particle> int_mesh = EulerIntegration(mesh);
 
     csv(int_mesh);
 

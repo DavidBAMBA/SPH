@@ -12,7 +12,7 @@ const int Nx_l  = 320; const int Nx_r  = 80;
 const int Nx = Nx_l + Nx_r;
 const int N = Nx;
 
-const double kappa   = 2.0;
+const double kappa   = 20.0;
 const double nu      = 1.4;
 const double gamma1  = 1.4;
 const double Gamma   = 1.4;
@@ -123,7 +123,7 @@ void GhostParticles(std::vector<Particle>& mesh, double x1, double x2) {
 
 double h_len(double mass, double rho) {
     double in = 0.0;
-    return in + nu * (mass / rho);
+    return 0.5; //in + nu * (mass / rho);
 }
 
 double Kernel(double x_ij, double h)

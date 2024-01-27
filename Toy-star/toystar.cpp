@@ -8,11 +8,11 @@
 constexpr double PI = 3.14159265358979323846;
 const double par = 1.0;
 const double k = 0.1;
-const double nu = 2.0;
+const double nu = 1.0;
 const double lmbda  = 2.01;
-const int Nx = 7;
-const int Ny = 7;
-const int Nz = 7;
+const int Nx = 3;
+const int Ny = 3;
+const int Nz = 3;
 const int N = Nx * Ny * Nz;
 const double kappa = 400000000.0;
 
@@ -22,7 +22,7 @@ struct Particle {
     Eigen::Vector3d r;
     Eigen::Vector3d v;
     double rho, P;
-    double mass = 0.016;
+    double mass = 2.0/N;
 
     // Derivatives
     Eigen::Vector3d d_r = Eigen::Vector3d::Zero();
@@ -73,7 +73,7 @@ std::vector<Particle> Mesh(double x1, double x2, double y1, double y2, double z1
 
 double h_len(double mass, double rho){
     
-    return 0.5;
+    return 0.1;
 }
 
 
@@ -189,7 +189,7 @@ std::vector<Particle> System(std::vector<Particle>& mesh) {
         int pj = pair_j[kk];
         
         mesh[pi].rho += mesh[pj].mass * q[kk];
-        //mesh[pj].rho += mesh[pi].mass * q[kk];
+        mesh[pj].rho += mesh[pi].mass * q[kk];
     }
     //std::cout<<"aqui"<<std::endl;
     // Update Pressure
@@ -203,7 +203,8 @@ std::vector<Particle> System(std::vector<Particle>& mesh) {
         int pj = pair_j[kk];
 
         mesh[pi].d_v += Acceleration( mesh[pj].mass, mesh[pi].rho, mesh[pj].rho, mesh[pi].P, mesh[pj].P, dq[kk]) + viscosForce(mesh[pi].v) + gravForce(mesh[pi].r);
-        //mesh[pj].d_v -= Acceleration( mesh[pi].mass, mesh[pj].rho, mesh[pi].rho, mesh[pj].P, mesh[pi].P, dq[kk]) - viscosForce(mesh[pj].v) - gravForce(mesh[pj].r);
+        mesh[pj].d_v -= Acceleration( mesh[pi].mass, mesh[pj].rho, mesh[pi].rho, mesh[pj].P, mesh[pi].P, dq[kk]) - viscosForce(mesh[pj].v) - gravForce(mesh[pj].r);
+        
         }
 
     for (Particle& p : mesh) {
@@ -216,7 +217,7 @@ std::vector<Particle> System(std::vector<Particle>& mesh) {
 
 std::vector<Particle> Integration(std::vector<Particle>& mesh, double x1, double x2, int n) {
 
-    double tstep = 0.05;
+    double tstep = 0.005;
     const double tmax = tstep * n;
     const int    NSteps = static_cast<int>((tmax - tstep) / tstep);
     double t = 0.005;
@@ -293,9 +294,9 @@ int main(int argc, char* argv[]) {
 
      // Define the dimentions of tube
     int n = std::atoi(argv[1]);
-    double x1 = 0.0, x2 = 1.0;
-    double y1 = 0.0, y2 = 1.0;
-    double z1 = 0.0, z2 = 1.0;
+    double x1 = -3.0, x2 = 3.0;
+    double y1 = -3.0, y2 = 3.0;
+    double z1 = -3.0, z2 = 3.0;
 
     std::vector<Particle> mesh = Mesh(x1,x2,y1,y2,z1,z2);
     std::cout<<" Mesh created" << std::endl;
