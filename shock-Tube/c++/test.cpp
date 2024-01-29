@@ -1,30 +1,46 @@
 #include <iostream>
 #include <cmath>
+#include <Eigen/Dense>
 
-// Function to apply periodic boundary conditions in 1D
-double applyPeriodicBoundary1D(double position, double box_length) {
-    // The fmod function is used to apply the wrap-around effect
-    position = std::fmod(position, box_length);
-    std::cout<<position<<std::endl;
-    // If position is negative, wrap it to the other end of the box
-    if (position < 0) {
-        position += box_length;
+
+Eigen::Vector2d GradM6QuinticKernel2D(const Eigen::Vector2d& r_ij, double h) {
+    const double sigma = 7.0/ (478.0 * M_PI * h * h);
+    double r = r_ij.norm();
+    //std::cout<<"r: "<<r<<std::endl;
+    double q = r / h;
+    //std::cout<<"q: "<<q<<std::endl;
+    Eigen::Vector2d gradW = Eigen::Vector2d::Zero();
+    Eigen::Vector2d r_hat = r_ij.normalized() / h;
+
+    if (r > 0.0){
+
+        if (q >= 0.0 && q < 1.0) {
+            gradW = (sigma * 5 * ((3 - q) * (3 - q) * (3 - q) * (3 - q) - 
+                6  * (2 - q) * (2 - q) * (2 - q) * (2 - q) +
+                15 * (1 - q) * (1 - q) * (1 - q) * (1 - q))) * r_hat;
+        } else if (q >= 1.0 && q < 2.0) {
+            gradW = (sigma * ((3 - q) * (3 - q) * (3 - q) * (3 - q) * (3 - q) - 
+                     6 * (2 - q) * (2 - q) * (2 - q) * (2 - q) * (2 - q))) * r_hat;
+        } else if (q >= 2.0 && q < 3.0) {
+            gradW = (sigma * ((3 - q) * (3 - q) * (3 - q) * (3 - q) * (3 - q))) * r_hat;
+        }
+
     }
-    return position;
+
+    return gradW;
 }
 
+
+
 int main() {
-    // Define the size of the 1D box
-    double box_length = 1.2;
     
-    // Example position of a particle in 1D
-    double position = 1.5;
-    
-    // Apply periodic boundary conditions
-    double wrapped_position = applyPeriodicBoundary1D(position, box_length);
-    
-    // Output the result
-    std::cout << "The wrapped position is: " << wrapped_position << std::endl;
+    Eigen::Vector2d r  = Eigen::Vector2d(0.25,0.0);
+    double h = 0.1;
+    Eigen::Vector2d q = GradM6QuinticKernel2D(r, h);
+
+    std::cout<< "value: " << q.transpose() << std::endl;
+
+
     
     return 0;
 }

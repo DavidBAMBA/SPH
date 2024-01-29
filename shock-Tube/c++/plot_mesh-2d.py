@@ -16,7 +16,7 @@ plt.show()
 
 # Graficar la coordenada x en función de la velocidad
 plt.figure(figsize=(10, 5))
-plt.scatter(mesh['x'], mesh['vx'])
+plt.scatter(mesh['x'], mesh['P'], s=1)
 plt.title('Posición x vs Velocidad')
 plt.xlabel('Posición x')
 plt.ylabel('Velocidad')
