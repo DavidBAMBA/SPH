@@ -5,7 +5,7 @@ CC=g++
 EXECUTABLE=a.out
 
 # Definir el script de Python
-PYTHON_SCRIPT=/home/yo/Documents/Tesis/codes/SPH/shock-Tube/c++/plot_mesh-2d.py
+PYTHON_SCRIPT=/home/yo/Documents/Tesis/codes/SPH/blast-Wave/plot-2d.py
 
 # La regla 'all' se ejecutará por defecto si solo se escribe 'make' en la terminal.
 # Agregamos un argumento 'n' que se puede pasar al llamar a make.
@@ -14,8 +14,8 @@ all: $(EXECUTABLE)
 	/bin/python3 $(PYTHON_SCRIPT) $(n)
 
 # Regla para construir el ejecutable
-$(EXECUTABLE): st-2d.cpp
-	$(CC) st-2d.cpp -o $(EXECUTABLE)
+$(EXECUTABLE): blast-wave-2d.cpp
+	$(CC) blast-wave-2d.cpp -o $(EXECUTABLE)
 
 # Regla para limpiar los archivos compilados (opcional)
 clean:

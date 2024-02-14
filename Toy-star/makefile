@@ -1,5 +1,5 @@
 # Definir el compilador
-CC=g++
+CC=g++ -fopenmp
 
 # Definir el nombre del archivo ejecutable
 EXECUTABLE=a.out

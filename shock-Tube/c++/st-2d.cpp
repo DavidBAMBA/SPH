@@ -1,4 +1,3 @@
-
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -8,8 +7,8 @@
 
 // Constant and Parameters
 
-const int Nx_l = 20; const int Nx_r = 20;
-const int Ny_l = 20; const int Ny_r = 20;
+const int Nx_l = 10; const int Nx_r = 5;
+const int Ny_l = 5; const int Ny_r = 5;
 const int Nx = Nx_l + Nx_r;
 const int Ny = Ny_l + Ny_r;
 
@@ -33,57 +32,58 @@ struct Particle {
     bool ghost = false; // Indicates if the particle is a ghost particle
 };
 
-
- 
 std::vector<Particle> Mesh(double x1, double x2, double y1, double y2) {
     // Calculate dimensions
     double xdim = x2 - x1;
     double ydim = y2 - y1;
 
-    // Calculate center of the domain
-    double centerX = x1 + xdim / 2;
-    double centerY = y1 + ydim / 2;
-
-    // Calculate the critical radius for "right" values
-    double criticalRadius = std::min(xdim, ydim) / 3;
-
-    // Hexagonal packing parameters
-    double xstep = xdim / Nx;
-    double ystep = ydim / (Ny - 1) * sqrt(3) / 2; // Adjust for hexagonal packing
+    // Calculate steps for left and right sides
+    double xstep_l = (xdim / 2.0) / Nx_l;
+    double xstep_r = (xdim / 2.0) / Nx_r;
+    double ystep = ydim / ((Ny - 1) * sqrt(3) / 2);
 
     // Create a mesh of particles
     std::vector<Particle> mesh;
+    mesh.reserve(N);
 
-    for (int jj = 0; jj <= Ny; ++jj) {
-        for (int ii = 0; ii <= Nx; ++ii) {
+    // Offsets for hexagonal close packing
+    double xOffset_l = xstep_l / 2.0;
+    double xOffset_r = xstep_r / 2.0;
+    double yOffset = ystep * sqrt(3) / 2.0;
 
+    for (int jj = 1; jj <= Ny; ++jj) {
+        for (int ii = 0; ii <= (Nx_l + Nx_r) + 1 ; ++ii) {
             Particle p;
-            double x = x1 + ii * xstep + (jj % 2) * (xstep / 2); // Offset every other row for hexagonal packing
-            double y = y1 + jj * ystep;
 
-            p.r = Eigen::Vector2d(x, y);
-            p.v = Eigen::Vector2d(0.0, 0.0);
-            double r = sqrt(pow(x - centerX, 2) + pow(y - centerY, 2));
+            // Calculate position with offsets for hexagonal packing
+            double x, y;
+            y = y1 + (jj - 1) * yOffset;
 
-            // Apply conditions based on distance
-            if (r > criticalRadius) {
-                p.rho = 0.125; 
-                p.e = 1.795;  
-                p.P = 0.1;    
-            } else {
-                p.rho = 1.0;  
-                p.e = 2.5;    
-                p.P = 10.0;     
+            if (ii <= Nx_l) { // Left side
+                x = x1 + (ii - 1) * xstep_l + (jj % 2) * xOffset_l;
+                p.r = Eigen::Vector2d(x, y);
+                p.v = Eigen::Vector2d(0.0, 0.0);
+                p.rho = 1.0;
+                p.e = 2.5;
+                p.P = 1.0;
+            } else { // Right side
+                int ii_r = ii - Nx_l; // Adjusted index for right side
+                x = x1 + xdim / 2 + (ii_r - 1) * xstep_r + (jj % 2) * xOffset_r;
+                p.r = Eigen::Vector2d(x, y);
+                p.v = Eigen::Vector2d(0.0, 0.0);
+                p.rho = 0.125;
+                p.e = 1.795;
+                p.P = 0.1;
             }
 
             mesh.push_back(p);
         }
     }
 
+
+
     return mesh;
 }
- 
-
 
 void UpdateGhostParticles(std::vector<Particle>& particles) {
     for (auto& p : particles) {
@@ -188,8 +188,9 @@ void Boundary_Periodic(std::vector<Particle>& mesh, double x1, double x2, double
 
 
 double h_len(double mass, double rho) {
-    return 0.1;
+    return std::sqrt(mass / rho);
 }
+
 
 
 double M6Kernel(const Eigen::Vector2d& r_ij, double h) {
@@ -216,6 +217,7 @@ double M6Kernel(const Eigen::Vector2d& r_ij, double h) {
     
     return w;
 }
+
 
 
 Eigen::Vector2d GradM6Kernel(const Eigen::Vector2d& r_ij, double h) {
@@ -318,7 +320,7 @@ Eigen::Vector2d Acceleration(double mass,double rho_i, double rho_j, double P_i,
 double Energy(double mass, double rho_i, double rho_j, double P_i,double  P_j, const Eigen::Vector2d& v_i,
                         const Eigen::Vector2d& v_j, const Eigen::Vector2d& gradW, Eigen::Vector2d diss) 
 {
-        return mass * ( P_i*v_j/(rho_i*rho_i) + P_j*v_i/(rho_j*rho_j) ).dot(gradW); //0.5??
+        return -mass * ( P_i*v_j/(rho_i*rho_i) + P_j*v_i/(rho_j*rho_j) ).dot(gradW); //0.5??
 }
 
 
@@ -503,8 +505,8 @@ int main(){
 
     // Define the dimentions of tube
     double x1 = 0.0; double x2 = 1.0;
-    double y_1 = 0.0; double y2 = 1.0;
-    int steps = 50;
+    double y_1 = 0.0; double y2 = 0.1;
+    int steps = 1;
     std::vector<Particle> mesh = Mesh(x1,x2,y_1,y2);
     std::cout<<" Mesh created" << std::endl;
     AddGhostParticles(mesh, x1, x2, y_1, y2);

@@ -9,31 +9,31 @@ def plot_system(S_i):
     fig, axs = plt.subplots(2, 2, figsize=[10, 10])  # Creates a 2x2 grid
     fig.subplots_adjust(wspace=0.5, hspace=0.5)
     # Density plot
-    axs[0, 0].scatter(S_plot['x'], S_plot['rho'], s=1)
+    axs[0, 0].scatter(S_plot['x'], S_plot['rho'], s=0.5)
     axs[0, 0].set_xlabel('x')
     axs[0, 0].set_xlim([-0.4, 0.4])
-    axs[0, 0].set_ylim([0, 1.1])
+    #axs[0, 0].set_ylim([0, 1.1])
     axs[0, 0].set_ylabel('Density')
 
     # Velocity plot
-    axs[0, 1].scatter(S_plot['x'], S_plot['vx'], s=1)
+    axs[0, 1].scatter(S_plot['x'], S_plot['vx'], s=0.5)
     axs[0, 1].set_xlabel('x')
     axs[0, 1].set_xlim([-0.4, 0.4])
     axs[0, 1].set_ylim([0, 1])
     axs[0, 1].set_ylabel('Velocity ')
 
     # Energy plot
-    axs[1, 0].scatter(S_plot['x'], S_plot['e'], s=1)
+    axs[1, 0].scatter(S_plot['x'], S_plot['e'], s=0.5)
     axs[1, 0].set_xlabel('x ')
     axs[1, 0].set_xlim([-0.4, 0.4])
-    axs[1, 0].set_ylim([1.8, 2.6])
+    #axs[1, 0].set_ylim([1.5, 2.9])
     axs[1, 0].set_ylabel('Energy')
 
     # Pressure plot
-    axs[1, 1].scatter(S_plot['x'], S_plot['P'], s=1)
+    axs[1, 1].scatter(S_plot['x'], S_plot['P'], s=0.5)
     axs[1, 1].set_xlabel('x')
     axs[1, 1].set_xlim([-0.4, 0.4])
-    axs[1, 1].set_ylim([0, 1.2])
+    #axs[1, 1].set_ylim([0, 1.2])
     axs[1, 1].set_ylabel('Pressure')
     
     plt.savefig('c-plot.png', dpi=500)  # Guarda la gráfica como una imagen PNG con una resolución de 300 dpi

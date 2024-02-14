@@ -3,16 +3,16 @@
 #include <cmath>
 #include <Eigen/Dense>
 #include <fstream>
-
+#include <omp.h>
 
 constexpr double PI = 3.14159265358979323846;
 const double par = 1.0;
 const double k = 0.1;
-const double nu = 1.0;
+const double nu = 0.06;
 const double lmbda  = 2.01;
-const int Nx = 3;
-const int Ny = 3;
-const int Nz = 3;
+const int Nx = 5;
+const int Ny = 5;
+const int Nz = 5;
 const int N = Nx * Ny * Nz;
 const double kappa = 400000000.0;
 
@@ -100,37 +100,52 @@ Eigen::Vector3d GradKernel3D(const Eigen::Vector3d& r_ij, double h)
 }
 
 
+
 void nearest_neight(const std::vector<Particle>& mesh,
                     std::vector<int>& pair_i, std::vector<int>& pair_j,
                     std::vector<double>& q, std::vector<Eigen::Vector3d>& dq) {
 
-    double h_ij;
-    
-    for (int ii = 0; ii < N; ++ii) {
-        int count = 0;
-        for (int jj = 0; jj < N; ++jj){
-            // relative distance
-            Eigen::Vector3d r_ij = mesh[ii].r - mesh[jj].r;
+    // Estructuras de datos temporales para cada hilo
+    #pragma omp parallel
+    {
+        std::vector<int> local_pair_i;
+        std::vector<int> local_pair_j;
+        std::vector<double> local_q;
+        std::vector<Eigen::Vector3d> local_dq;
 
-            h_ij = 0.5 * ( h_len(mesh[ii].mass, mesh[ii].rho) + h_len(mesh[jj].mass, mesh[jj].rho) );
+        #pragma omp for nowait  // Distribuye el bucle for entre los hilos, sin esperar al final
+        for (int ii = 0; ii < N; ++ii) {
+            for (int jj = 0; jj < N; ++jj){
+                if (ii != jj) { 
+                    Eigen::Vector3d r_ij = mesh[ii].r - mesh[jj].r;
+                    double h_ij = 0.5 * ( h_len(mesh[ii].mass, mesh[ii].rho) + h_len(mesh[jj].mass, mesh[jj].rho) );
 
-            // Condition of nearest
-            if (r_ij.norm() <= kappa * h_ij){
-                pair_i.push_back(ii);
-                pair_j.push_back(jj);
-                q.push_back( Kernel(r_ij, h_ij) );
-                dq.push_back( GradKernel3D(r_ij, h_ij) );
-                count += 1;
+                    if (r_ij.norm() <= kappa * h_ij){
+                        local_pair_i.push_back(ii);
+                        local_pair_j.push_back(jj);
+                        local_q.push_back( Kernel(r_ij, h_ij) );
+                        local_dq.push_back( GradKernel3D(r_ij, h_ij) );
+                    }
+                }
             }
         }
-        //std::cout<<"vecinos : "<<count<<std::endl;       
+
+        // Combinar los datos locales al final de la región paralela
+        #pragma omp critical
+        {
+            pair_i.insert(pair_i.end(), local_pair_i.begin(), local_pair_i.end());
+            pair_j.insert(pair_j.end(), local_pair_j.begin(), local_pair_j.end());
+            q.insert(q.end(), local_q.begin(), local_q.end());
+            dq.insert(dq.end(), local_dq.begin(), local_dq.end());
+        }
     }
-
-
 }
 
+
 void InitializeDensity(std::vector<Particle>& mesh) {
-    for (auto& pi : mesh) {
+    #pragma omp parallel for  // Directiva OpenMP para paralelizar este bucle
+    for (int i = 0; i < mesh.size(); ++i) {
+        auto& pi = mesh[i];
         pi.rho = 0.0; 
         for (const auto& pj : mesh) {
             Eigen::Vector3d r_ij = pi.r - pj.r; 
@@ -182,28 +197,34 @@ std::vector<Particle> System(std::vector<Particle>& mesh) {
    
     //std::cout<<"aqui"<<std::endl;
 
-    // Update Density
+    #pragma omp parallel for
     for (int kk = 0; kk < NPairs; ++kk) {
-
         int pi = pair_i[kk];
         int pj = pair_j[kk];
         
-        mesh[pi].rho += mesh[pj].mass * q[kk];
-        mesh[pj].rho += mesh[pi].mass * q[kk];
+        double contrib = mesh[pj].mass * q[kk];
+        #pragma omp atomic
+        mesh[pi].rho += contrib;
+        //#pragma omp atomic
+        //mesh[pj].rho += contrib;
     }
+
     //std::cout<<"aqui"<<std::endl;
     // Update Pressure
-    for (Particle& p : mesh) {
-        p.P = Pressure(p.rho);
+    // Actualizar la presión
+    #pragma omp parallel for
+    for (int i = 0; i < mesh.size(); ++i) {
+        mesh[i].P = Pressure(mesh[i].rho);
     }
 
     // Calculate the System Equations 
+    #pragma omp parallel for
     for (int kk = 0; kk < NPairs; ++kk) {
         int pi = pair_i[kk];
         int pj = pair_j[kk];
 
         mesh[pi].d_v += Acceleration( mesh[pj].mass, mesh[pi].rho, mesh[pj].rho, mesh[pi].P, mesh[pj].P, dq[kk]) + viscosForce(mesh[pi].v) + gravForce(mesh[pi].r);
-        mesh[pj].d_v -= Acceleration( mesh[pi].mass, mesh[pj].rho, mesh[pi].rho, mesh[pj].P, mesh[pi].P, dq[kk]) - viscosForce(mesh[pj].v) - gravForce(mesh[pj].r);
+        //mesh[pj].d_v -= Acceleration( mesh[pi].mass, mesh[pj].rho, mesh[pi].rho, mesh[pj].P, mesh[pi].P, dq[kk]) - viscosForce(mesh[pj].v) - gravForce(mesh[pj].r);
         
         }
 
@@ -217,10 +238,10 @@ std::vector<Particle> System(std::vector<Particle>& mesh) {
 
 std::vector<Particle> Integration(std::vector<Particle>& mesh, double x1, double x2, int n) {
 
-    double tstep = 0.005;
+    double tstep = 0.004;
     const double tmax = tstep * n;
     const int    NSteps = static_cast<int>((tmax - tstep) / tstep);
-    double t = 0.005;
+    double t = 0.004;
 
     // Loop for the integration
     for (int ii = 0; ii <= NSteps; ++ii) {

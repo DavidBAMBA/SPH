@@ -14,9 +14,10 @@ const int N = Nx;
 
 const double kappa   = 2.0;
 const double nu      = 1.4;
-const double gamma1  = 1.66666666;
-const double Gamma   = 1.4;
+const double gamma1  = 4.0/3.0;
+const double G   = 1.4;
 
+ 
 struct Particle {
 
     // Propierties
@@ -157,8 +158,8 @@ double  A_Viscosity(double  x_i,double  x_j, double  v_i, double  v_j,
                     double rho_i, double  rho_j,double e_i, double  e_j, double  h_i, double h_j)
 {   
     double alpha  = 1.0, beta = 1.0; 
-    double c_i    = std::sqrt((Gamma - 1.0) * e_i);
-    double c_j    = std::sqrt((Gamma - 1.0) * e_j);
+    double c_i    = std::sqrt((G - 1.0) * e_i);
+    double c_j    = std::sqrt((G - 1.0) * e_j);
     double x_ij   = x_i - x_j;
     double v_ij   = v_i - v_j;
     double c_ij   = (c_i + c_j) * 0.5;
@@ -180,8 +181,8 @@ double energy_disipation(double  x_i,double  x_j, double  v_i, double  v_j,
                     double rho_i, double  rho_j,double e_i, double  e_j, double  h_i, double h_j){
 
     double alpha  = 1.0; double beta = 2.0;
-    double c_i = std::sqrt((Gamma - 1.0) * e_i);
-    double c_j = std::sqrt((Gamma - 1.0) * e_j);
+    double c_i = std::sqrt((G - 1.0) * e_i);
+    double c_j = std::sqrt((G - 1.0) * e_j);
     double x_ij = x_i - x_j;
     double j = x_ij / std::sqrt(x_ij*x_ij);
     double v_ij = v_i - v_j;
@@ -206,7 +207,7 @@ double energy_disipation(double  x_i,double  x_j, double  v_i, double  v_j,
 
 double Pressure (double rho, double e) 
 {
-    return (Gamma-1) * rho * e;
+    return (gamma-1) * rho * e;
 }
 
 
